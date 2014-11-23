@@ -234,13 +234,13 @@ namespace HeightmapExtractor
 
         private void Window(int id)
         {
-            GUI.BeginGroup(new Rect(10, 10, 380, 150));
-            if (this.amountComplete != 1d)
+            GUI.BeginGroup(new Rect(10, 10, 380, 150));          
+            if (amountComplete == 1d && this.complete) { GUI.Label(new Rect(0, 20, 380, 15), "Complete", skins.label); }
+            else
             {
                 GUI.Label(new Rect(0, 20, 380, 15), this.message, skins.label);
                 this.progressbar.SetValue(amountComplete);
             }
-            else { GUI.Label(new Rect(0, 20, 380, 15), "Complete", skins.label); }
 
             GUI.BeginGroup(new Rect(5, 50, 380, 30));
             this.progressbar.Draw();

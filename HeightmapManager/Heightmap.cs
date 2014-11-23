@@ -36,6 +36,9 @@ namespace HeightmapManager
         }
 
         #region Arrays
+        /// <summary>
+        /// The accepted extension formats for the heightmap binary files
+        /// </summary>
         private string[] acceptedExtensions = { ".bin", ".raw", ".dat" };
         #endregion
 
@@ -92,10 +95,10 @@ namespace HeightmapManager
         /// </summary>
         /// <param name="width">Width of the heightmap in pixels</param>
         /// <param name="height">Height of the heightmap in pixels</param>
-        public Heightmap(int width, int height)
+        public Heightmap(ushort width, ushort height)
         {
-            this._width = (ushort)width;
-            this._height = (ushort)height;
+            this._width = width;
+            this._height = height;
             this.pixels = new short[height, width];
         }
 
@@ -116,11 +119,11 @@ namespace HeightmapManager
         /// <param name="values">Single dimensional array of heights</param>
         /// <param name="width">Width of the heightmap in pixels</param>
         /// <param name="height">Height of the heightmap in pixels</param>
-        public Heightmap(short[] values, int width, int height)
+        public Heightmap(short[] values, ushort width, ushort height)
         {
-            this._width = (ushort)width;
-            this._height = (ushort)height;
-            this.pixels = new short[this._height, this._width];
+            this._width = width;
+            this._height = height;
+            this.pixels = new short[height, width];
             for (int y = 0; y < height; y++)
             {
                 for (int x = 0; x < width; x++)
@@ -246,10 +249,10 @@ namespace HeightmapManager
             switch (format)
             {
                 case SaveFormat.BINARY:
-                    SaveAsBinary(path + "_raw.bin"); break;
+                    SaveAsBinary(path); break;
 
                 case SaveFormat.IMAGE:
-                    SaveAsImage(path + ".png"); break;
+                    SaveAsImage(path); break;
 
                 case SaveFormat.BOTH:
                     SaveBoth(path); break;
@@ -288,7 +291,7 @@ namespace HeightmapManager
             if (!Path.HasExtension(path) || Path.GetExtension(path).ToLower() != ".png") { Path.ChangeExtension(path, ".png"); }
             short[] values = ReadPixels();
             Color[] pixels = new Color[this.size];
-            short min = values.Min();
+            int min = values.Min();
             int range = values.Max() - min;
             for (int y = 0; y < this.height; y++)
             {
@@ -319,7 +322,7 @@ namespace HeightmapManager
             data.AddRange(BitConverter.GetBytes(this._height));
             short[] values = ReadPixels();
             Color[] pixels = new Color[this.size];
-            short min = values.Min();
+            int min = values.Min();
             int range = values.Max() - min;
             for (int y = 0; y < this._height; y++)
             {
