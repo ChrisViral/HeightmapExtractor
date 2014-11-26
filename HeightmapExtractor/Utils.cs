@@ -77,9 +77,11 @@ namespace HeightmapExtractor
             return text.Split(',').Select(s => s.Trim()).ToArray();
         }
 
-        public static short ClampToInt16(int value)
+        public static short ClampToRange(int value, int min, int max)
         {
-            return (short)Math.Max(-32768, Math.Min(value, 32767));
+            if (value <= min || min == max) { return (short)min; }
+            else if (value >= max) { return (short)max; }
+            return (short)value;
         }
         #endregion
     }

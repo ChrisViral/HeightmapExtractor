@@ -60,8 +60,24 @@ namespace HeightmapExtractor
         /// <param name="value">Value to store the result in</param>
         public static bool TryGetValue(this ConfigNode node, string name, ref ushort value)
         {
-            ushort result = 0;
+            ushort result;
             if (node.HasValue(name) && ushort.TryParse(node.GetValue(name), out result))
+            {
+                value = result;
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Returns true if the ConfigNode contains the value and sotres it in the ref if it is parsable. Value is left unchanged if not.
+        /// </summary>
+        /// <param name="name">Name of the value to look for</param>
+        /// <param name="value">Value to store the result in</param>
+        public static bool TryGetValue(this ConfigNode node, string name, ref short value)
+        {
+            short result;
+            if (node.HasValue(name) && short.TryParse(node.GetValue(name), out result))
             {
                 value = result;
                 return true;
@@ -76,7 +92,7 @@ namespace HeightmapExtractor
         /// <param name="value">Value to store the result in</param>
         public static bool TryGetValue(this ConfigNode node, string name, ref bool value)
         {
-            bool result = false;
+            bool result;
             if (node.HasValue(name) && bool.TryParse(node.GetValue(name), out result))
             {
                 value = result;
