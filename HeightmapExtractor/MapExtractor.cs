@@ -1,4 +1,6 @@
-﻿using System;
+﻿#define DEBUG
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
@@ -14,11 +16,29 @@ namespace HeightmapExtractor
     [KSPAddon(KSPAddon.Startup.SpaceCentre, true)]
     public class MapExtractor : MonoBehaviour
     {
+        /// <summary>
+        /// Heightmap generation states
+        /// </summary>
         private enum GenerationStates
         {
+            /// <summary>
+            /// Idle
+            /// </summary>
             NONE,
+
+            /// <summary>
+            /// Setting up for new body
+            /// </summary>
             INITIATING,
+
+            /// <summary>
+            /// Generating heightmap
+            /// </summary>
             GENERATING,
+
+            /// <summary>
+            /// Saving heightmap
+            /// </summary>
             SAVING
         }
 
@@ -30,12 +50,11 @@ namespace HeightmapExtractor
         private bool extract = false;
         private string destinationURL = string.Empty;
         private bool invertLatitude = false, invertLongitude = false;
-        private short latitudeOffset = 0, longitudeOffset = 0;
-        private short startingLatitude = 90, endingLatitude = -90;
-        private short startingLongitude = -180, endingLongitude = 180;
-        private short minAltitude = short.MinValue, maxAltidue = short.MaxValue;
+        private double latitudeOffset = 0, longitudeOffset = 0;
+        private double startingLatitude = -90, endingLatitude = 90;
+        private double startingLongitude = -180, endingLongitude = 180;
+        private double minAltitude = double.MinValue, maxAltitude = double.MaxValue;
         private bool invertColours = true;
-        private string saveType = "BOTH";
         private Heightmap.SaveFormat saveFormat = Heightmap.SaveFormat.BOTH;
         private Stopwatch timer = new Stopwatch(), mapTimer = new Stopwatch();
 
@@ -59,7 +78,6 @@ namespace HeightmapExtractor
         private GenerationStates state = GenerationStates.NONE;
         private CelestialBody body = null;
         private short[,] values = new short[0, 0];
-        private Color[] image = new Color[0];
         private bool complete = false;
         #endregion
 
@@ -83,7 +101,7 @@ namespace HeightmapExtractor
         /// </summary>
         private double latitude
         {
-            get { return (this.invertLatitude ? -1 : 1) * (((this.y * (this.startingLatitude - this.endingLatitude)) / (double)this.height) - 90 + latitudeOffset);}
+            get { return (this.invertLatitude ? -1 : 1) * (((this.y * (this.endingLatitude - this.startingLatitude)) / (double)this.height) + this.startingLatitude + latitudeOffset); }
         }
 
         /// <summary>
@@ -91,7 +109,7 @@ namespace HeightmapExtractor
         /// </summary>
         private double longitude
         {
-            get { return (invertLongitude ? -1 : 1) * (((x * (this.endingLongitude - this.startingLongitude)) / (double)this.width) - 180 + longitudeOffset); }
+            get { return (invertLongitude ? -1 : 1) * (((x * (this.endingLongitude - this.startingLongitude)) / (double)this.width) + this.startingLongitude + longitudeOffset); }
         }
 
         /// <summary>
@@ -148,7 +166,7 @@ namespace HeightmapExtractor
                 return;
             }
             
-            //Generation fields
+            //Generation restrictions
             this.settings.TryGetValue("invertLatitude", ref this.invertLatitude);
             this.settings.TryGetValue("invertLongitude", ref this.invertLongitude);
             this.settings.TryGetValue("latitudeOffset", ref this.latitudeOffset);
@@ -157,9 +175,12 @@ namespace HeightmapExtractor
             this.settings.TryGetValue("endingLatitude", ref this.endingLatitude);
             this.settings.TryGetValue("startingLongitude", ref this.startingLongitude);
             this.settings.TryGetValue("endingLongitude", ref this.endingLongitude);
+            this.settings.TryGetValue("minAltitude", ref this.minAltitude);
+            this.settings.TryGetValue("maxAltitude", ref this.maxAltitude);
             this.settings.TryGetValue("invertColours", ref this.invertColours);
-            this.settings.TryGetValue("saveType", ref this.saveType);
-            switch(this.saveType.ToUpper())
+            string saveType = string.Empty;
+            this.settings.TryGetValue("saveType", ref saveType);
+            switch(saveType.ToUpper())
             {
                 case "IMAGE":
                     this.saveFormat = Heightmap.SaveFormat.IMAGE; break;
@@ -180,7 +201,7 @@ namespace HeightmapExtractor
             this.window = new Rect((Screen.width / 2) - 200, (Screen.height / 2) - 75, 400, 150);
 
             //Extraction startup
-            InputLockManager.SetControlLock(ControlTypes.ALLBUTCAMERAS, "Heightmap Extractor");
+            InputLockManager.SetControlLock(ControlTypes.ALLBUTCAMERAS, "HeightmapExtractor");
             this.visible = true;
             this.state = GenerationStates.INITIATING;
             print("[HeightmapExtractor]: Starting map extraction.");
@@ -204,7 +225,6 @@ namespace HeightmapExtractor
                             this.currentBody = this.body.bodyName;
                             this.message = "Extracting " + this.currentBody;
                             this.values = new short[this.height, this.width];
-                            this.image = new Color[this.resolution];
                             this.state = GenerationStates.GENERATING;
                             print("[HeightmapExtractor]: Extracting heightmap of " + this.currentBody);
                             this.mapTimer = Stopwatch.StartNew();
@@ -215,15 +235,16 @@ namespace HeightmapExtractor
                             //Reading values line by line
                             do
                             {
-                                this.values[y, x] = Utils.ClampToRange((int)Math.Round(terrainAltitude), this.minAltitude, this.maxAltidue);
-                                x++;
+                                double alt = Utils.ClampToRange(this.terrainAltitude, this.minAltitude, this.maxAltitude);
+                                this.values[y, x] = Utils.ClampToInt16(alt);
+                                this.x++;
                             }
                             while (this.x < this.width && this.x % this.pixelsPerFrame != 0);
 
                             if (this.x >= this.width)
                             {
-                                y++;
-                                x = 0;
+                                this.y++;
+                                this.x = 0;
                                 if (this.y >= this.height)
                                 {
                                     this.state = GenerationStates.SAVING;
@@ -265,6 +286,7 @@ namespace HeightmapExtractor
                                 this.state = GenerationStates.NONE;
                                 this.progressbar.SetValue(1);
                                 print(String.Format("[HeightmapExtractor]: Total map generation time: {0:0.000}s", this.time));
+                                this.complete = true;
                             }
                             else { this.state = GenerationStates.INITIATING; }
                             return;
@@ -272,9 +294,8 @@ namespace HeightmapExtractor
 
                     case GenerationStates.NONE:
                     default:
-                        break;
+                        return;
                 }
-                if (!this.complete) { this.complete = true; }
             }
         }
         #endregion
@@ -289,7 +310,7 @@ namespace HeightmapExtractor
 
             #region DEBUG
             #if DEBUG
-            this.debug = GUILayout.Window(this.dId, this.debug, Debug, "Debug window");
+            this.debug = GUILayout.Window(this.debugId, this.debug, Debug, "Debug window");
             #endif
             #endregion
         }
@@ -297,7 +318,7 @@ namespace HeightmapExtractor
         private void Window(int id)
         {
             GUI.BeginGroup(new Rect(10, 10, 380, 150));          
-            if (amountComplete == 1d && this.complete) { GUI.Label(new Rect(0, 20, 380, 15), "Complete", skins.label); }
+            if (this.complete) { GUI.Label(new Rect(0, 20, 380, 15), "Complete", skins.label); }
             else
             {
                 GUI.Label(new Rect(0, 20, 380, 15), this.message, skins.label);
@@ -308,7 +329,7 @@ namespace HeightmapExtractor
             this.progressbar.Draw();
             GUI.EndGroup();
 
-            if (this.amountComplete == 1d && this.complete)
+            if (this.complete)
             {
                 if (GUI.Button(new Rect(155, 80, 80, 25), "Close", skins.button))
                 {
@@ -334,10 +355,9 @@ namespace HeightmapExtractor
                     string path = Path.Combine(Utils.mapsURL, "Kerbin_raw.bin");
                     print(path);
                     Heightmap map = new Heightmap(path);
-                    print(map.height);
-                    print(map.width);
-                    print(map.size);
-                    print(map.ToByteArray().LongLength);
+                    print(map.ToString());
+                    print("Heightmap size: " + map.size);
+                    print("Heightmap byte array size: " + map.ToByteArray().LongLength);
                 }
                 catch(Exception e)
                 {
@@ -348,57 +368,6 @@ namespace HeightmapExtractor
                         print(String.Format("{0}\n{1}\n{2}", e.InnerException.GetType().Name, e.InnerException.Message, e.InnerException.StackTrace));
                     }
                 }
-            }
-
-            if (GUILayout.Button("Load from static method"))
-            {
-                try
-                {
-                    string path = Path.Combine(Utils.mapsURL, "Kerbin_raw.bin");
-                    print(path);
-                    Heightmap map = Heightmap.CreateNewFromBinary(path);
-                    print(map.height);
-                    print(map.width);
-                    print(map.size);
-                    print(map.ToByteArray().LongLength);
-                }
-                catch (Exception e)
-                {
-                    print(e.InnerException == null);
-                    print(String.Format("{0}\n{1}\n{2}", e.GetType().Name, e.Message, e.StackTrace));
-                    if (e.InnerException != null)
-                    {
-                        print(String.Format("{0}\n{1}\n{2}", e.InnerException.GetType().Name, e.InnerException.Message, e.InnerException.StackTrace));
-                    }
-                }
-            }
-
-            if (GUILayout.Button("Print pixel info"))
-            {
-                Heightmap map = new Heightmap(Path.Combine(Utils.mapsURL, "Kerbin_raw.bin"));
-                print("Extracting from Kerbin_raw.bin");
-                print("Bilinear pixel coords: (0.337, 0.729)");
-                print("Actual coords: (970.56, 1049.76) or (58.68°E, 41.22°S)");
-                Vector3d radial = QuaternionD.AngleAxis(-58.68, Vector3d.down) * QuaternionD.AngleAxis(41.22, Vector3d.forward) * Vector3d.right;
-                PQS kerbin = FlightGlobals.Bodies.Single(b => b.bodyName == "Kerbin").pqsController;
-                double alt = kerbin.GetSurfaceHeight(radial) - kerbin.radius;
-                print("PQS altitude: " + alt);
-                Stopwatch t = Stopwatch.StartNew();
-                double p = map.ReadPixelBilinear(0.337, 0.729);
-                t.Stop();
-                print("Bilinear read: " + p);
-                print("Time to read bilinear pixel: " + t.Elapsed.TotalMilliseconds + "ms");
-                short A = map[970, 1049], B = map[971, 1049], C = map[970, 1050], D = map[971, 1050];
-                print("(970, 1049): " + A);
-                print("(971, 1049): " + B);
-                print("(970, 1050): " + C);
-                print("(971, 1050): " + D);
-                double x = MathHelp.Lerp(0.56, A, B), y = MathHelp.Lerp(0.56, C, D);
-                print("Top lerp: " + x);
-                print("Bottom lerp: " + y);
-                double z = MathHelp.Lerp(0.76, x, y);
-                print("Final value: " + z);
-                print("Bilinear is equal: " + (z == p));
             }
 
             GUI.DragWindow();

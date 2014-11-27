@@ -86,6 +86,22 @@ namespace HeightmapExtractor
         }
 
         /// <summary>
+        /// Returns true if the ConfigNode contains the value and sotres it in the ref if it is parsable. Value is left unchanged if not.
+        /// </summary>
+        /// <param name="name">Name of the value to look for</param>
+        /// <param name="value">Value to store the result in</param>
+        public static bool TryGetValue(this ConfigNode node, string name, ref double value)
+        {
+            double result;
+            if (node.HasValue(name) && double.TryParse(node.GetValue(name), out result))
+            {
+                value = result;
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
         /// Sees if the ConfigNode has a given value, and tries to store it in the ref if it's parseable
         /// </summary>
         /// <param name="name">Name of the value to get</param>

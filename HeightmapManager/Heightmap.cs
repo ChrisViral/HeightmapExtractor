@@ -43,7 +43,7 @@ namespace HeightmapManager
         #endregion
 
         #region Properties
-        private ushort _width;
+        private readonly ushort _width;
         /// <summary>
         /// Width in pixels of the heightmap
         /// </summary>
@@ -52,7 +52,7 @@ namespace HeightmapManager
             get { return this._width; }
         }
 
-        private ushort _height;
+        private readonly ushort _height;
         /// <summary>
         /// Height in pixels of the heightmap
         /// </summary>
@@ -182,7 +182,7 @@ namespace HeightmapManager
         {
             if (path == null) { throw new ArgumentNullException("path", "The path cannot be null"); }
             if (!File.Exists(path)) { throw new FileNotFoundException("The following file was not found on the system.", path); }
-            if (!acceptedExtensions.Contains(Path.GetExtension(path).ToLower())) { throw new NotSupportedException("Only .bin, .raw, and .dat format supported."); }
+            if (!acceptedExtensions.Contains(Path.GetExtension(path).ToLower())) { throw new NotSupportedException("Only .bin, .raw, and .dat formats supported."); }
 
             byte[] data = File.ReadAllBytes(path);
             this._width = BitConverter.ToUInt16(data, 0);
@@ -315,8 +315,7 @@ namespace HeightmapManager
                 for (int x = 0; x < this._width; x++)
                 {
                     int index = (y * this._width) + x;
-                    float shade = ((float)(values[index] - min)) / (float)range;
-                    if (this.invertColours) { shade = 1 - shade; }
+                    float shade = this.invertColours ? (1f - (((float)(values[index] - min)) / (float)range)) : (((float)(values[index] - min)) / (float)range);
                     pixels[index] = new Color(shade, shade, shade);
                 }
             }
@@ -383,7 +382,8 @@ namespace HeightmapManager
         /// <param name="path">Absolute path to save the heightmap to</param>
         private void SaveAsBinary(string path)
         {
-            if (!Path.HasExtension(path) || !acceptedExtensions.Contains(Path.GetExtension(path).ToLower())) { Path.ChangeExtension(path, ".bin"); }
+            if (!Path.HasExtension(path)) { path += "_raw.bin"; }
+            else if (!acceptedExtensions.Contains(Path.GetExtension(path).ToLower())) { Path.ChangeExtension(path, ".bin"); }
             File.WriteAllBytes(path, ToByteArray());
         }
 
@@ -393,6 +393,8 @@ namespace HeightmapManager
         /// <param name="path">Absolute path to save the heightmap to</param>
         private void SaveAsImage(string path)
         {
+            if (!Path.HasExtension(path)) { path += ".png"; }
+            if (Path.GetExtension(path).ToLower() != ".png") { Path.ChangeExtension(path, ".png"); }
             Texture2D map = ToTexture2D();
             File.WriteAllBytes(path, map.EncodeToPNG());
             Texture2D.Destroy(map);
@@ -418,8 +420,7 @@ namespace HeightmapManager
                 {
                     data.AddRange(BitConverter.GetBytes(this[x, y]));
                     int index = (y * this.width) + x;
-                    float shade = ((float)(values[index] - min)) / (float)range;
-                    if (this.invertColours) { shade = 1 - shade; }
+                    float shade = this.invertColours ? (1f - (((float)(values[index] - min)) / (float)range)) : (((float)(values[index] - min)) / (float)range);
                     pixels[index] = new Color(shade, shade, shade);
                 }
             }
@@ -429,36 +430,6 @@ namespace HeightmapManager
             map.Apply();
             File.WriteAllBytes(path + ".png", map.EncodeToPNG());
             Texture2D.Destroy(map);
-        }
-        #endregion
-
-        #region Static Methods
-        /// <summary>
-        /// Creates a new Heightmap object from a binary file
-        /// </summary>
-        /// <param name="path">Absolute path to the binary file</param>
-        public static Heightmap CreateNewFromBinary(string path)
-        {
-            if (path == null) { throw new ArgumentNullException("path", "The path cannot be null"); }
-            if (!File.Exists(path)) { throw new FileNotFoundException("The following file was not found on the system.", path); }
-            if (!acceptedExtensions.Contains(Path.GetExtension(path).ToLower())) { throw new NotSupportedException("Only .bin, .raw, and .dat format supported."); }
-
-            byte[] data = File.ReadAllBytes(path);
-            ushort width = BitConverter.ToUInt16(data, 0);
-            ushort height = BitConverter.ToUInt16(data, 2);
-
-            if (data.LongLength != (((long)width * (long)height * 2L) + 4L)) { throw new FormatException("Binary data is of incorrect lenght or incorrectly formatted."); }
-
-            short[,] pixels = new short[height, width];
-            for (int y = 0; y < height; y++)
-            {
-                for (int x = 0; x < width; x++)
-                {
-                    int i = (((y * width) + x) * 2) + 4;
-                    pixels[y, x] = BitConverter.ToInt16(data, i);
-                }
-            }
-            return new Heightmap(pixels, true);
         }
         #endregion
 

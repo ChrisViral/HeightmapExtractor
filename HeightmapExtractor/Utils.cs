@@ -72,16 +72,37 @@ namespace HeightmapExtractor
         #endregion
 
         #region Methods
+        /// <summary>
+        /// Separates a string at each comma and returns all the elements into an array
+        /// </summary>
+        /// <param name="text">String to separate</param>
         public static string[] ParseArray(string text)
         {
             return text.Split(',').Select(s => s.Trim()).ToArray();
         }
 
-        public static short ClampToRange(int value, int min, int max)
+        /// <summary>
+        /// Clamps a value between a minium and a maximum
+        /// </summary>
+        /// <param name="value">Value to clamp</param>
+        /// <param name="min">Minimal value</param>
+        /// <param name="max">Maximal value</param>
+        public static double ClampToRange(double value, double min, double max)
         {
-            if (value <= min || min == max) { return (short)min; }
-            else if (value >= max) { return (short)max; }
-            return (short)value;
+            if (value >= max || min == max) { return max; }
+            else if (value <= min) { return min; }
+            return value;
+        }
+
+        /// <summary>
+        /// Clamps a value to the range of a signed interger
+        /// </summary>
+        /// <param name="value">Value to clamp</param>
+        public static short ClampToInt16(double value)
+        {
+            if (value >= 32767) { return (short)32767; }
+            else if (value <= -32768) { return (short)-32768; }
+            return (short)Math.Round(value);
         }
         #endregion
     }
