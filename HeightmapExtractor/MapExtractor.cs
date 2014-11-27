@@ -1,6 +1,4 @@
-﻿#define DEBUG
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
@@ -13,7 +11,7 @@ using HeightmapManager;
 
 namespace HeightmapExtractor
 {
-    [KSPAddon(KSPAddon.Startup.SpaceCentre, true)]
+    [KSPAddon(KSPAddon.Startup.SpaceCentre, false)]
     public class MapExtractor : MonoBehaviour
     {
         /// <summary>
@@ -42,12 +40,19 @@ namespace HeightmapExtractor
             SAVING
         }
 
+        #region Instance
+        private static MapExtractor _instance = null;
+        public static MapExtractor instance
+        {
+            get { return _instance; }
+        }
+        #endregion
+
         #region Fields
         //Image settings
         private ConfigNode settings = new ConfigNode();
         private ushort height = 360, width = 720, pixelsPerFrame = 720;
         private List<CelestialBody> bodies = new List<CelestialBody>();
-        private bool extract = false;
         private string destinationURL = string.Empty;
         private bool invertLatitude = false, invertLongitude = false;
         private double latitudeOffset = 0, longitudeOffset = 0;
@@ -68,10 +73,6 @@ namespace HeightmapExtractor
         private GUISkin skins = HighLogic.Skin;
         private bool visible = false;
 
-        //Debug GUI
-        private Rect debug = new Rect(100, 100, 150, 100);
-        private int debugId = Guid.NewGuid().GetHashCode();
-
         //Generation fields
         private int bodyIndex = 0, x = 0, y = 0;
         private long resolution = 0;
@@ -82,6 +83,15 @@ namespace HeightmapExtractor
         #endregion
 
         #region Properties
+        private bool _extract = false;
+        /// <summary>
+        /// If the system is currently extracting maps
+        /// </summary>
+        public bool extract
+        {
+            get { return this._extract; }
+        }
+
         /// <summary>
         /// Percentage of the generation that's complete
         /// </summary>
@@ -89,7 +99,7 @@ namespace HeightmapExtractor
         {
             get
             {
-                if (!this.extract) { return 1; }
+                if (!this._extract) { return 1; }
                 double done = (y * this.width) + x;
                 double mapPercent = done / (double)resolution;
                 return ((double)bodyIndex + mapPercent) / (double)bodies.Count;
@@ -137,21 +147,19 @@ namespace HeightmapExtractor
         #region Initialization
         private void Awake()
         {
-            //Generation information
-            if (!ConfigNode.Load(Utils.settingsURL).TryGetNode("SETTINGS", ref this.settings)) { this.extract = false; return; }
-            if (!this.settings.TryGetValue("extractMaps", ref this.extract) || !this.extract) { return; }
-            this.settings.TryGetValue("mapHeight", ref this.height);
-            this.settings.TryGetValue("mapWidth", ref this.width);
-            this.settings.TryGetValue("maxPixelsPerFrame", ref this.pixelsPerFrame);
-            this.resolution = (long)this.height * (long)this.width;
-            string[] bodyList = new string[0];
-            this.settings.TryGetValue("bodies", ref bodyList);
-            if (bodyList.Length == 1 && bodyList[0].ToLower() == "all") { this.bodies = new List<CelestialBody>(FlightGlobals.Bodies.Where(b => b.pqsController != null)); }
-            else { this.bodies = new List<CelestialBody>(FlightGlobals.Bodies.Where(b => bodyList.Contains(b.bodyName) && b.pqsController != null)); }
-            if (this.bodies.Count == 0) { this.extract = false; return; }
-            this.settings.TryGetValue("destinationURL", ref this.destinationURL);
-            if (string.IsNullOrEmpty(destinationURL)) { this.destinationURL = Utils.mapsURL; }
-            if (!Directory.Exists(destinationURL)) { Directory.CreateDirectory(destinationURL); }
+            if (_instance == null)
+            {
+                _instance = this;
+            }
+            else
+            {
+                Destroy(this);
+            }
+        }
+
+        private void Start()
+        {
+            LoadConfig();
 
             //Progressbar
             try
@@ -162,57 +170,28 @@ namespace HeightmapExtractor
             catch (Exception e)
             {
                 UnityEngine.Debug.LogError(String.Format("[HeightmapExtractor]: Encountered an error loading the progressbar images. Aborting process.\n{0}\n{1}", e.GetType().Name, e.StackTrace));
-                this.extract = false;
+                this._extract = false;
                 return;
-            }
-            
-            //Generation restrictions
-            this.settings.TryGetValue("invertLatitude", ref this.invertLatitude);
-            this.settings.TryGetValue("invertLongitude", ref this.invertLongitude);
-            this.settings.TryGetValue("latitudeOffset", ref this.latitudeOffset);
-            this.settings.TryGetValue("longitudeOffset", ref this.longitudeOffset);
-            this.settings.TryGetValue("startingLatitude", ref this.startingLatitude);
-            this.settings.TryGetValue("endingLatitude", ref this.endingLatitude);
-            this.settings.TryGetValue("startingLongitude", ref this.startingLongitude);
-            this.settings.TryGetValue("endingLongitude", ref this.endingLongitude);
-            this.settings.TryGetValue("minAltitude", ref this.minAltitude);
-            this.settings.TryGetValue("maxAltitude", ref this.maxAltitude);
-            this.settings.TryGetValue("invertColours", ref this.invertColours);
-            string saveType = string.Empty;
-            this.settings.TryGetValue("saveType", ref saveType);
-            switch(saveType.ToUpper())
-            {
-                case "IMAGE":
-                    this.saveFormat = Heightmap.SaveFormat.IMAGE; break;
-
-                case "BINARY":
-                    this.saveFormat = Heightmap.SaveFormat.BINARY; break;
-
-                case "BOTH":
-                default:
-                    this.saveFormat = Heightmap.SaveFormat.BOTH; break;
             }
 
             //GUI initialization
             Rect backgroundPos = new Rect(0, 0, 374, 19);
             Rect barPos = new Rect(2, 2, 370, 15);
             this.progressbar = new Progressbar(backgroundPos, barPos, background, bar);
-            this.progressbar.SetValue(0);
             this.window = new Rect((Screen.width / 2) - 200, (Screen.height / 2) - 75, 400, 150);
 
-            //Extraction startup
-            InputLockManager.SetControlLock(ControlTypes.ALLBUTCAMERAS, "HeightmapExtractor");
-            this.visible = true;
-            this.state = GenerationStates.INITIATING;
-            print("[HeightmapExtractor]: Starting map extraction.");
-            this.timer.Start();
+            if (this._extract)
+            {
+                //Extraction startup
+                StartGeneration();
+            }
         }
         #endregion
 
         #region Functions
         private void Update()
         {
-            if (this.extract)
+            if (this._extract)
             {
                 switch (this.state)
                 {
@@ -268,7 +247,7 @@ namespace HeightmapExtractor
                             {
                                 this.mapTimer.Stop();
                                 UnityEngine.Debug.LogError(String.Format("[HeightmapExtractor]: Could not save heightmap for {0}\n{1}\n{2}", this.currentBody, e.GetType().Name, e.StackTrace));
-                                this.extract = false;
+                                this._extract = false;
                                 return;
                             }
                             this.bodyIndex++;
@@ -276,7 +255,7 @@ namespace HeightmapExtractor
                             if (this.bodyIndex >= this.bodies.Count)
                             {
                                 //Finishing up
-                                this.extract = false;
+                                this._extract = false;
                                 this.settings.SetValue("extractMaps", bool.FalseString);
                                 ConfigNode node = new ConfigNode();
                                 node.AddNode(this.settings);
@@ -300,6 +279,73 @@ namespace HeightmapExtractor
         }
         #endregion
 
+        #region Static methods
+        public static void LoadConfig()
+        {
+            //Generation information
+            if (!ConfigNode.Load(Utils.settingsURL).TryGetNode("SETTINGS", ref _instance.settings)) { _instance._extract = false; return; }
+            _instance.settings.TryGetValue("extractMaps", ref _instance._extract);
+            _instance.settings.TryGetValue("mapHeight", ref _instance.height);
+            _instance.settings.TryGetValue("mapWidth", ref _instance.width);
+            _instance.settings.TryGetValue("maxPixelsPerFrame", ref _instance.pixelsPerFrame);
+            _instance.resolution = (long)_instance.height * (long)_instance.width;
+            string[] bodyList = new string[0];
+            _instance.settings.TryGetValue("bodies", ref bodyList);
+            if (bodyList.Length == 1 && bodyList[0].ToLower() == "all") { _instance.bodies = new List<CelestialBody>(FlightGlobals.Bodies.Where(b => b.pqsController != null)); }
+            else { _instance.bodies = new List<CelestialBody>(FlightGlobals.Bodies.Where(b => bodyList.Contains(b.bodyName) && b.pqsController != null)); }
+            if (_instance.bodies.Count == 0) { _instance._extract = false; return; }
+            _instance.settings.TryGetValue("destinationURL", ref _instance.destinationURL);
+            if (string.IsNullOrEmpty(_instance.destinationURL)) { _instance.destinationURL = Utils.mapsURL; }
+            if (!Directory.Exists(_instance.destinationURL)) { Directory.CreateDirectory(_instance.destinationURL); }
+
+            //Generation restrictions
+            _instance.settings.TryGetValue("invertLatitude", ref _instance.invertLatitude);
+            _instance.settings.TryGetValue("invertLongitude", ref _instance.invertLongitude);
+            _instance.settings.TryGetValue("latitudeOffset", ref _instance.latitudeOffset);
+            _instance.settings.TryGetValue("longitudeOffset", ref _instance.longitudeOffset);
+            _instance.settings.TryGetValue("startingLatitude", ref _instance.startingLatitude);
+            _instance.settings.TryGetValue("endingLatitude", ref _instance.endingLatitude);
+            _instance.settings.TryGetValue("startingLongitude", ref _instance.startingLongitude);
+            _instance.settings.TryGetValue("endingLongitude", ref _instance.endingLongitude);
+            _instance.settings.TryGetValue("minAltitude", ref _instance.minAltitude);
+            _instance.settings.TryGetValue("maxAltitude", ref _instance.maxAltitude);
+            _instance.settings.TryGetValue("invertColours", ref _instance.invertColours);
+            string saveType = string.Empty;
+            _instance.settings.TryGetValue("saveType", ref saveType);
+            switch (saveType.ToUpper())
+            {
+                case "IMAGE":
+                    _instance.saveFormat = Heightmap.SaveFormat.IMAGE; break;
+
+                case "BINARY":
+                    _instance.saveFormat = Heightmap.SaveFormat.BINARY; break;
+
+                case "BOTH":
+                default:
+                    _instance.saveFormat = Heightmap.SaveFormat.BOTH; break;
+            }
+        }
+
+        public static void StartGeneration()
+        {
+            if (_instance.settings == null)
+            {
+                print("[HeightmapExtractor]: Cannot start generation, settings node not found");
+                _instance._extract = false;
+                return;
+            }
+            _instance._extract = true;
+            _instance.complete = false;
+            InputLockManager.SetControlLock(ControlTypes.ALLBUTCAMERAS, "HeightmapExtractor");
+            _instance.progressbar.SetValue(0);
+            _instance.visible = true;
+            _instance.bodyIndex = 0;
+            _instance.state = GenerationStates.INITIATING;
+            print("[HeightmapExtractor]: Starting map extraction.");
+            _instance.timer = Stopwatch.StartNew();
+        }
+        #endregion
+
         #region GUI
         private void OnGUI()
         {
@@ -307,12 +353,6 @@ namespace HeightmapExtractor
             {
                 this.window = GUI.Window(this.id, this.window, Window, "Heightmap Extractor " + Utils.assemblyVersion, skins.window);
             }
-
-            #region DEBUG
-            #if DEBUG
-            this.debug = GUILayout.Window(this.debugId, this.debug, Debug, "Debug window");
-            #endif
-            #endregion
         }
 
         private void Window(int id)
@@ -344,33 +384,6 @@ namespace HeightmapExtractor
                 GUI.Label(new Rect(0, 110, 380, 20), String.Format("Current time: {0:0.000}s", this.timer.Elapsed.TotalSeconds), skins.label);
             }
             GUI.EndGroup();
-        }
-
-        private void Debug(int id)
-        {
-            if (GUILayout.Button("Load from constructor"))
-            {
-                try
-                {
-                    string path = Path.Combine(Utils.mapsURL, "Kerbin_raw.bin");
-                    print(path);
-                    Heightmap map = new Heightmap(path);
-                    print(map.ToString());
-                    print("Heightmap size: " + map.size);
-                    print("Heightmap byte array size: " + map.ToByteArray().LongLength);
-                }
-                catch(Exception e)
-                {
-                    print(e.InnerException == null);
-                    print(String.Format("{0}\n{1}\n{2}", e.GetType().Name, e.Message, e.StackTrace));
-                    if (e.InnerException != null)
-                    {
-                        print(String.Format("{0}\n{1}\n{2}", e.InnerException.GetType().Name, e.InnerException.Message, e.InnerException.StackTrace));
-                    }
-                }
-            }
-
-            GUI.DragWindow();
         }
         #endregion
     }

@@ -26,6 +26,11 @@ namespace HeightmapExtractor
         /// Local URL to the progressbar folder
         /// </summary>
         public const string localProgressbarURL = "GameData/HeightmapExtractor/Plugins/PluginData/Progressbar";
+
+        /// <summary>
+        /// Local URL to the Applauncher icon
+        /// </summary>
+        public const string localIconURL = "GameData/HeightmapExtractor/Plugins/PluginData/Extractor_Icon.png";
         #endregion
 
         #region Properties
@@ -51,6 +56,14 @@ namespace HeightmapExtractor
         public static string progressbarURL
         {
             get { return Path.Combine(KSPUtil.ApplicationRootPath, localProgressbarURL); }
+        }
+
+        /// <summary>
+        /// Absolute URL to the Applauncher icon
+        /// </summary>
+        public static string iconURL
+        {
+            get { return Path.Combine(KSPUtil.ApplicationRootPath, localIconURL); }
         }
 
         /// <summary>

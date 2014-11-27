@@ -7,6 +7,7 @@ namespace HeightmapManager
 {
     public static class MathHelp
     {
+        #region Methods
         /// <summary>
         /// Clamps a value between 0 and 1
         /// </summary>
@@ -30,5 +31,7 @@ namespace HeightmapManager
             else if (d >= 1) { return b; }
             return (a > b ? b : a) + (Math.Abs(a - b) * d);
         }
+        #endregion
     }
 }
+
