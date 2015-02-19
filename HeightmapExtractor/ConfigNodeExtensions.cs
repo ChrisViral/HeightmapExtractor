@@ -47,7 +47,7 @@ namespace HeightmapExtractor
         {
             if (node.HasValue(name))
             {
-                value = Utils.ParseArray(node.GetValue(name));
+                value = HeightmapUtils.ParseArray(node.GetValue(name));
                 return true;
             }
             return false;

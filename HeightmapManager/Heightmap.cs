@@ -263,7 +263,7 @@ namespace HeightmapManager
         public double ReadPixelBilinear(double x, double y)
         {
             //Position on the map
-            Vector2d pos = new Vector2d(MathHelp.Clamp01(x) * this._width, MathHelp.Clamp01(y) * this._height);
+            Vector2d pos = new Vector2d(MathUtils.Clamp01(x) * this._width, MathUtils.Clamp01(y) * this._height);
             //Decimal fraction between pixels
             Vector2d pPos = new Vector2d(pos.x - Math.Truncate(pos.x), pos.y - Math.Truncate(pos.y));
             if (pPos.magnitude == 0) { return this.pixels[(int)pos.y, (int)pos.x]; }
@@ -271,9 +271,9 @@ namespace HeightmapManager
             int x1 = (int)Math.Floor(pos.x), x2 = (int)Math.Ceiling(pos.x);
             int y1 = (int)Math.Floor(pos.y), y2 = (int)Math.Ceiling(pos.y);
             //First linear interpolation on the x axis
-            Vector2d xPos = new Vector2d(MathHelp.Lerp(pPos.x, this.pixels[y1, x1], this.pixels[y1, x2]), MathHelp.Lerp(pPos.x, this.pixels[y2, x1], this.pixels[y2, x2]));
+            Vector2d xPos = new Vector2d(MathUtils.Lerp(pPos.x, this.pixels[y1, x1], this.pixels[y1, x2]), MathUtils.Lerp(pPos.x, this.pixels[y2, x1], this.pixels[y2, x2]));
             //Second linear interpolation between the first two axis
-            return MathHelp.Lerp(pPos.y, xPos.x, xPos.y);
+            return MathUtils.Lerp(pPos.y, xPos.x, xPos.y);
         }
 
         /// <summary>
@@ -315,8 +315,9 @@ namespace HeightmapManager
                 for (int x = 0; x < this._width; x++)
                 {
                     int index = (y * this._width) + x;
-                    float shade = this.invertColours ? (1f - (((float)(values[index] - min)) / (float)range)) : (((float)(values[index] - min)) / (float)range);
-                    pixels[index] = new Color(shade, shade, shade);
+                    float c = (((float)(values[index] - min)) / (float)range);
+                    if (this.invertColours) { c = 1 - c; }
+                    pixels[index] = new Color(c, c, c);
                 }
             }
             return pixels;

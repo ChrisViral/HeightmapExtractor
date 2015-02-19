@@ -25,12 +25,8 @@ namespace HeightmapExtractor
             if (ApplicationLauncher.Ready)
             {
                 button = ApplicationLauncher.Instance.AddModApplication(
-                    Show,
-                    Hide,
-                    Empty,
-                    Empty,
-                    Empty,
-                    Empty,
+                    Show, Hide,
+                    Empty, Empty, Empty, Empty,
                     ApplicationLauncher.AppScenes.SPACECENTER,
                     (Texture)buttonTexture);
             }
@@ -63,9 +59,9 @@ namespace HeightmapExtractor
         private void Awake()
         {
             this.window = new Rect(100, 100, 330, 130);
-            this.buttonTexture.LoadImage(File.ReadAllBytes(Utils.iconURL));
-
+            this.buttonTexture.LoadImage(File.ReadAllBytes(HeightmapUtils.iconURL));
             GameEvents.onGUIApplicationLauncherReady.Add(AddButton);
+
             GameEvents.onShowUI.Add(ShowUI);
             GameEvents.onHideUI.Add(HideUI);
             GameEvents.onGUIAstronautComplexSpawn.Add(HideUI);
@@ -81,6 +77,7 @@ namespace HeightmapExtractor
         private void OnDestroy()
         {
             GameEvents.onGUIApplicationLauncherReady.Remove(AddButton);
+
             GameEvents.onShowUI.Remove(ShowUI);
             GameEvents.onHideUI.Remove(HideUI);
             GameEvents.onGUIAstronautComplexSpawn.Remove(HideUI);
@@ -101,7 +98,7 @@ namespace HeightmapExtractor
         {
             if (this.showing && this.visible)
             {
-                this.window = GUILayout.Window(this.id, this.window, Window, "HeightmapExtractor Controller " + Utils.assemblyVersion, skins.window);
+                this.window = GUILayout.Window(this.id, this.window, Window, "HeightmapExtractor Controller " + HeightmapUtils.assemblyVersion, skins.window);
             }
         }
 

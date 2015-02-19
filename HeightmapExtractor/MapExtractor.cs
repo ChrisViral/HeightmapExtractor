@@ -164,8 +164,8 @@ namespace HeightmapExtractor
             //Progressbar
             try
             {
-                this.bar.LoadImage(File.ReadAllBytes(Path.Combine(Utils.progressbarURL, "progressbar.png")));
-                this.background.LoadImage(File.ReadAllBytes(Path.Combine(Utils.progressbarURL, "progressbarBackground.png")));
+                this.bar.LoadImage(File.ReadAllBytes(Path.Combine(HeightmapUtils.progressbarURL, "progressbar.png")));
+                this.background.LoadImage(File.ReadAllBytes(Path.Combine(HeightmapUtils.progressbarURL, "progressbarBackground.png")));
             }
             catch (Exception e)
             {
@@ -209,13 +209,14 @@ namespace HeightmapExtractor
                             this.mapTimer = Stopwatch.StartNew();
                             return;
                         }
+
                     case GenerationStates.GENERATING:
                         {
                             //Reading values line by line
                             do
                             {
-                                double alt = Utils.ClampToRange(this.terrainAltitude, this.minAltitude, this.maxAltitude);
-                                this.values[y, x] = Utils.ClampToInt16(alt);
+                                double alt = MathUtils.ClampToRange(this.terrainAltitude, this.minAltitude, this.maxAltitude);
+                                this.values[y, x] = MathUtils.ClampToInt16(alt);
                                 this.x++;
                             }
                             while (this.x < this.width && this.x % this.pixelsPerFrame != 0);
@@ -250,6 +251,7 @@ namespace HeightmapExtractor
                                 this._extract = false;
                                 return;
                             }
+
                             this.bodyIndex++;
 
                             if (this.bodyIndex >= this.bodies.Count)
@@ -259,7 +261,7 @@ namespace HeightmapExtractor
                                 this.settings.SetValue("extractMaps", bool.FalseString);
                                 ConfigNode node = new ConfigNode();
                                 node.AddNode(this.settings);
-                                node.Save(Utils.settingsURL);
+                                node.Save(HeightmapUtils.settingsURL);
                                 this.timer.Stop();
                                 this.time = this.timer.Elapsed.TotalSeconds;
                                 this.state = GenerationStates.NONE;
@@ -283,7 +285,7 @@ namespace HeightmapExtractor
         public static void LoadConfig()
         {
             //Generation information
-            if (!ConfigNode.Load(Utils.settingsURL).TryGetNode("SETTINGS", ref _instance.settings)) { _instance._extract = false; return; }
+            if (!ConfigNode.Load(HeightmapUtils.settingsURL).TryGetNode("SETTINGS", ref _instance.settings)) { _instance._extract = false; return; }
             _instance.settings.TryGetValue("extractMaps", ref _instance._extract);
             _instance.settings.TryGetValue("mapHeight", ref _instance.height);
             _instance.settings.TryGetValue("mapWidth", ref _instance.width);
@@ -295,7 +297,7 @@ namespace HeightmapExtractor
             else { _instance.bodies = new List<CelestialBody>(FlightGlobals.Bodies.Where(b => bodyList.Contains(b.bodyName) && b.pqsController != null)); }
             if (_instance.bodies.Count == 0) { _instance._extract = false; return; }
             _instance.settings.TryGetValue("destinationURL", ref _instance.destinationURL);
-            if (string.IsNullOrEmpty(_instance.destinationURL)) { _instance.destinationURL = Utils.mapsURL; }
+            if (string.IsNullOrEmpty(_instance.destinationURL)) { _instance.destinationURL = HeightmapUtils.mapsURL; }
             if (!Directory.Exists(_instance.destinationURL)) { Directory.CreateDirectory(_instance.destinationURL); }
 
             //Generation restrictions
@@ -312,6 +314,7 @@ namespace HeightmapExtractor
             _instance.settings.TryGetValue("invertColours", ref _instance.invertColours);
             string saveType = string.Empty;
             _instance.settings.TryGetValue("saveType", ref saveType);
+
             switch (saveType.ToUpper())
             {
                 case "IMAGE":
@@ -351,7 +354,7 @@ namespace HeightmapExtractor
         {
             if (this.visible)
             {
-                this.window = GUI.Window(this.id, this.window, Window, "Heightmap Extractor " + Utils.assemblyVersion, skins.window);
+                this.window = GUI.Window(this.id, this.window, Window, "Heightmap Extractor " + HeightmapUtils.assemblyVersion, skins.window);
             }
         }
 
