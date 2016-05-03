@@ -69,12 +69,7 @@ namespace HeightmapExtractor
             IconURL = Path.Combine(KSPUtil.ApplicationRootPath, localIconURL);
 
             Version version = new Version(FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).ProductVersion);
-            if (version.Revision == 0)
-            {
-                if (version.Build == 0) { AssemblyVersion = "v" + version.ToString(2); }
-                AssemblyVersion = "v" + version.ToString(3);
-            }
-            AssemblyVersion = "v" + version;
+            AssemblyVersion = "v" + (version.Revision == 0 ? (version.Build == 0 ? version.ToString(2) : version.ToString(3)) : version.ToString());
         }
         #endregion
 
