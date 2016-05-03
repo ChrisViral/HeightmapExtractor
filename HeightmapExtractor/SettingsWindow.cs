@@ -7,129 +7,79 @@ using UnityEngine;
 
 namespace HeightmapExtractor
 {
-    [KSPAddon(KSPAddon.Startup.SpaceCentre, false)]
     public class SettingsWindow : MonoBehaviour
     {
         #region Fields
-        private GUISkin skins = HighLogic.Skin;
-        private int id = Guid.NewGuid().GetHashCode();
-        private bool visible = false, showing = true;
-        private Rect window = new Rect();
-        private Texture2D buttonTexture = new Texture2D(38, 38);
-        private ApplicationLauncherButton button = new ApplicationLauncherButton();
+        private readonly int id = Guid.NewGuid().GetHashCode();
+        private bool visible, hid;
+        private Rect window, drag;
         #endregion
 
         #region Methods
-        private void AddButton()
-        {
-            if (ApplicationLauncher.Ready)
-            {
-                button = ApplicationLauncher.Instance.AddModApplication(
-                    Show, Hide,
-                    Empty, Empty, Empty, Empty,
-                    ApplicationLauncher.AppScenes.SPACECENTER,
-                    (Texture)buttonTexture);
-            }
-        }
+        internal void Show() => this.visible = true;
 
-        private void Show()
-        {
-            this.visible = true;
-        }
+        internal void Hide() => this.visible = false;
 
-        private void Hide()
-        {
-            this.visible = false;
-        }
+        private void HideUI() => this.hid = true;
 
-        private void Empty() { }
-
-        private void HideUI()
-        {
-            this.showing = false;
-        }
-
-        private void ShowUI()
-        {
-            this.showing = true;
-        }
-        #endregion
-
-        #region Initialization
-        private void Awake()
-        {
-            this.window = new Rect(100, 100, 330, 130);
-            this.buttonTexture.LoadImage(File.ReadAllBytes(HeightmapUtils.iconURL));
-            GameEvents.onGUIApplicationLauncherReady.Add(AddButton);
-
-            GameEvents.onShowUI.Add(ShowUI);
-            GameEvents.onHideUI.Add(HideUI);
-            GameEvents.onGUIAstronautComplexSpawn.Add(HideUI);
-            GameEvents.onGUIAstronautComplexDespawn.Add(ShowUI);
-            GameEvents.onGUIRnDComplexSpawn.Add(HideUI);
-            GameEvents.onGUIRnDComplexDespawn.Add(ShowUI);
-            GameEvents.onGUIMissionControlSpawn.Add(HideUI);
-            GameEvents.onGUIMissionControlDespawn.Add(ShowUI);
-            GameEvents.onGUIAdministrationFacilitySpawn.Add(HideUI);
-            GameEvents.onGUIAdministrationFacilityDespawn.Add(ShowUI);
-        }
-
-        private void OnDestroy()
-        {
-            GameEvents.onGUIApplicationLauncherReady.Remove(AddButton);
-
-            GameEvents.onShowUI.Remove(ShowUI);
-            GameEvents.onHideUI.Remove(HideUI);
-            GameEvents.onGUIAstronautComplexSpawn.Remove(HideUI);
-            GameEvents.onGUIAstronautComplexDespawn.Remove(ShowUI);
-            GameEvents.onGUIRnDComplexSpawn.Remove(HideUI);
-            GameEvents.onGUIRnDComplexDespawn.Remove(ShowUI);
-            GameEvents.onGUIMissionControlSpawn.Remove(HideUI);
-            GameEvents.onGUIMissionControlDespawn.Remove(ShowUI);
-            GameEvents.onGUIAdministrationFacilitySpawn.Remove(HideUI);
-            GameEvents.onGUIAdministrationFacilityDespawn.Remove(ShowUI);
-
-            ApplicationLauncher.Instance.RemoveModApplication(button);
-        }
-        #endregion
-
-        #region GUI
-        private void OnGUI()
-        {
-            if (this.showing && this.visible)
-            {
-                this.window = GUILayout.Window(this.id, this.window, Window, "HeightmapExtractor Controller " + HeightmapUtils.assemblyVersion, skins.window);
-            }
-        }
+        private void ShowUI() => this.hid = false;
 
         private void Window(int id)
         {
-            GUI.DragWindow(new Rect(0, 0, window.width, 20));
+            GUI.DragWindow(this.drag);
 
             GUILayout.BeginVertical();
             GUILayout.FlexibleSpace();
 
-            GUI.enabled = !MapExtractor.instance.extract;
-            if (GUILayout.Button("Reload config", skins.button))
+            GUI.enabled = !MapExtractor.Instance.Extract;
+            if (GUILayout.Button("Reload config"))
             {
-                MapExtractor.LoadConfig();
-                print("[HeightmapExtractor]: Reloaded settings config");
+                MapExtractor.Instance.LoadConfig();
+                HMUtils.Print("[HeightmapExtractor]: Reloaded settings config");
             }
             GUILayout.FlexibleSpace();
 
-            if (GUILayout.Button("Restart generation", skins.button))
+            if (GUILayout.Button("Restart generation"))
             {
-                MapExtractor.StartGeneration();
+                MapExtractor.Instance.StartGeneration();
             }
             GUILayout.FlexibleSpace();
 
             GUI.enabled = true;
-            if (GUILayout.Button("Close", skins.button))
+            if (GUILayout.Button("Close"))
             {
-                button.SetFalse();
+                ToolbarManager.SetFalse();
             }
             GUILayout.FlexibleSpace();
             GUILayout.EndVertical();
+        }
+        #endregion
+
+        #region Functions
+        private void Awake()
+        {
+            this.window = new Rect(100, 100, 330, 130);
+            this.drag = new Rect(0, 0, 330, 30);
+
+            GameEvents.onShowUI.Add(ShowUI);
+            GameEvents.onHideUI.Add(HideUI);
+            GameEvents.onGUIAstronautComplexDespawn.Add(ShowUI);
+            GameEvents.onGUIAstronautComplexSpawn.Add(HideUI);
+            GameEvents.onGUIRnDComplexDespawn.Add(ShowUI);
+            GameEvents.onGUIRnDComplexSpawn.Add(HideUI);
+            GameEvents.onGUIMissionControlDespawn.Add(ShowUI);
+            GameEvents.onGUIMissionControlSpawn.Add(HideUI);
+            GameEvents.onGUIAdministrationFacilityDespawn.Add(ShowUI);
+            GameEvents.onGUIAdministrationFacilitySpawn.Add(HideUI);
+        }
+
+        private void OnGUI()
+        {
+            if (this.visible && !this.hid)
+            {
+                GUI.skin = HighLogic.Skin;
+                this.window = GUILayout.Window(this.id, this.window, Window, "HeightmapExtractor Controller " + HMUtils.AssemblyVersion);
+            }
         }
         #endregion
     }

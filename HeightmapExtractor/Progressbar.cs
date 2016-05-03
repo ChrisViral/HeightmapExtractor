@@ -1,5 +1,4 @@
-﻿using System;
-using UnityEngine;
+﻿using UnityEngine;
 
 /* HeightmapExtractor was made by Christophe Savard (stupid_chris), and is licensed under
  * CC-BY-NC-SA 4.0 INTL. If you have any questions about this, please contact me on the forums. */
@@ -9,11 +8,9 @@ namespace HeightmapExtractor
     public class Progressbar
     {
         #region Fields
-        private Texture2D background = new Texture2D(1, 1);
-        private Texture2D bar = new Texture2D(1, 1);
-        private Rect bgPosition = new Rect();
-        private Rect barPosition = new Rect();
-        private double filled = 0d;
+        private Texture2D background, bar;
+        private Rect bgPosition, barPosition;
+        private double filled;
         #endregion
 
         #region Constructor
@@ -45,9 +42,7 @@ namespace HeightmapExtractor
         /// <param name="value">Percentage of the bar filled</param>
         public void SetValue(double value)
         {
-            if (value > 1d) { this.filled = 1d; return; }
-            if (value < 0d) { this.filled = 0d; return; }
-            this.filled = value;
+            this.filled = value > 0 ? (value < 1 ? value : 1) : 0;
         }
 
         /// <summary>
@@ -58,9 +53,7 @@ namespace HeightmapExtractor
         /// <param name="max">Maximum value</param>
         public void SetValue(double value, double min, double max)
         {
-            if (value > max || min >= max) { this.filled = 1d; }
-            else if (value < min) { this.filled = 0d; }
-            else { this.filled = (value - min) / (max - min); }
+            this.filled = value < max && min < max ? (value > min ? (value - min) / (max - min) : 0) : 1;
         }
 
         /// <summary>
@@ -91,16 +84,14 @@ namespace HeightmapExtractor
             this.bgPosition = bgPosition;
             this.barPosition = barPosition;
         }
-        #endregion
 
-        #region Drawing
         /// <summary>
         /// Call this in OnGUI() to draw the ProgressBar
         /// </summary>
         public void Draw()
         {
-            GUI.DrawTexture(bgPosition, background);
-            GUI.DrawTexture(new Rect(barPosition.x, barPosition.y, (float)(barPosition.width * filled), barPosition.height), bar);
+            GUI.DrawTexture(this.bgPosition, this.background);
+            GUI.DrawTexture(new Rect(this.barPosition.x, this.barPosition.y, (float)(this.barPosition.width * this.filled), this.barPosition.height), this.bar);
         }
         #endregion
     }

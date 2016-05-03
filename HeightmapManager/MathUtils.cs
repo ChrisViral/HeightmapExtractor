@@ -12,12 +12,7 @@ namespace HeightmapManager
         /// Clamps a value between 0 and 1
         /// </summary>
         /// <param name="d">Value to clamp</param>
-        public static double Clamp01(double d)
-        {
-            if (d >= 1) { return 1; }
-            else if (d <= 0) { return 0; }
-            return d;
-        }
+        public static double Clamp01(double d) => d < 1 ? (d > 0 ? d : 0) : 1;
 
         /// <summary>
         /// Linearly extrapolates a value between a two value by automatically detecting the maximum and the minimum
@@ -25,12 +20,7 @@ namespace HeightmapManager
         /// <param name="d">percentage in between to evalutate (between 0 and 1)</param>
         /// <param name="a">First boudary value</param>
         /// <param name="b">Second boundary value</param>
-        public static double Lerp(double d, double a, double b)
-        {
-            if (a == b || d <= 0) { return a; }
-            else if (d >= 1) { return b; }
-            return (a > b ? b : a) + (Math.Abs(a - b) * d);
-        }
+        public static double Lerp(double d, double a, double b) => a != b && d > 0 ? (d < 1 ? (a > b ? b : a) + (Math.Abs(a - b) * d) : b) : a;
 
         /// <summary>
         /// Clamps a value between a minium and a maximum
@@ -38,23 +28,13 @@ namespace HeightmapManager
         /// <param name="value">Value to clamp</param>
         /// <param name="min">Minimal value</param>
         /// <param name="max">Maximal value</param>
-        public static double ClampToRange(double value, double min, double max)
-        {
-            if (value >= max || min == max) { return max; }
-            else if (value <= min) { return min; }
-            return value;
-        }
+        public static double ClampToRange(double value, double min, double max) => value < max && min < max ? (value > min ? value : min) : max;
 
         /// <summary>
         /// Clamps a value to the range of a signed interger
         /// </summary>
         /// <param name="value">Value to clamp</param>
-        public static short ClampToInt16(double value)
-        {
-            if (value >= 32767) { return (short)32767; }
-            else if (value <= -32768) { return (short)-32768; }
-            return (short)Math.Round(value);
-        }
+        public static short ClampToInt16(double value) => value < short.MaxValue ? (value > short.MinValue ? (short)Math.Round(value) : short.MinValue) : short.MaxValue;
         #endregion
     }
 }

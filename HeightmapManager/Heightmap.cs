@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 /* HeightmapExtractor was made by Christophe Savard (stupid_chris), and is licensed under
  * CC-BY-NC-SA 4.0 INTL. If you have any questions about this, please contact me on the forums. */
@@ -35,7 +36,7 @@ namespace HeightmapManager
             BOTH
         }
 
-        #region Arrays
+        #region Static fields
         /// <summary>
         /// The accepted extension formats for the heightmap binary files
         /// </summary>
@@ -43,41 +44,30 @@ namespace HeightmapManager
         #endregion
 
         #region Properties
-        private readonly ushort _width;
         /// <summary>
         /// Width in pixels of the heightmap
         /// </summary>
-        public ushort width
-        {
-            get { return this._width; }
-        }
+        public ushort Width { get; }
 
-        private readonly ushort _height;
         /// <summary>
         /// Height in pixels of the heightmap
         /// </summary>
-        public ushort height
-        {
-            get { return this._height; }
-        }
+        public ushort Height { get; }
 
         /// <summary>
         /// Total size of the heightmap in pixels
         /// </summary>
-        public int size
-        {
-            get { return this._width * this._height; }
-        }
+        public int Size => this.Width * this.Height;
 
         /// <summary>
         /// Two dimensional array of all the values of the heightmap in (y, x) coordinates
         /// </summary>
-        public short[,] pixels { get; private set; }
+        public short[,] Pixels { get; private set; }
 
         /// <summary>
         /// If true, high points are black and low points white, else high points are white and low points black
         /// </summary>
-        public bool invertColours { get; set; }
+        public bool InvertColours { get; set; }
         #endregion
 
         #region Indexers
@@ -89,8 +79,8 @@ namespace HeightmapManager
         /// <param name="y">Y coordinate of the pixel to access</param>
         public short this[int x, int y]
         {
-            get { return this.pixels[y, x]; }
-            set { this.pixels[y, x] = value; }
+            get { return this.Pixels[y, x]; }
+            set { this.Pixels[y, x] = value; }
         }
 
         /// <summary>
@@ -100,8 +90,8 @@ namespace HeightmapManager
         /// <param name="v">Two dimensional coordinates vector</param>
         public short this[Vector2 v]
         {
-            get { return this.pixels[(int)v.y, (int)v.x]; }
-            set { this.pixels[(int)v.y, (int)v.x] = value; }
+            get { return this.Pixels[(int)v.y, (int)v.x]; }
+            set { this.Pixels[(int)v.y, (int)v.x] = value; }
         }
 
         /// <summary>
@@ -111,8 +101,8 @@ namespace HeightmapManager
         /// <param name="v">Two dimensional coordinates vector</param>
         public short this[Vector2d v]
         {
-            get { return this.pixels[(int)v.y, (int)v.x]; }
-            set { this.pixels[(int)v.y, (int)v.x] = value; }
+            get { return this.Pixels[(int)v.y, (int)v.x]; }
+            set { this.Pixels[(int)v.y, (int)v.x] = value; }
         }
         #endregion
 
@@ -122,10 +112,10 @@ namespace HeightmapManager
         /// </summary>
         public Heightmap()
         {
-            this._width = 1;
-            this._height = 1;
-            this.pixels = new short[1, 1];
-            this.invertColours = true;
+            this.Width = 1;
+            this.Height = 1;
+            this.Pixels = new short[1, 1];
+            this.InvertColours = true;
         }
 
         /// <summary>
@@ -133,43 +123,46 @@ namespace HeightmapManager
         /// </summary>
         /// <param name="width">Width of the heightmap in pixels</param>
         /// <param name="height">Height of the heightmap in pixels</param>
+        /// <param name="invertColours">Inverts the block/white gradient used for the image maps</param>
         public Heightmap(ushort width, ushort height, bool invertColours)
         {
-            this._width = width;
-            this._height = height;
-            this.pixels = new short[height, width];
-            this.invertColours = invertColours;
+            this.Width = width;
+            this.Height = height;
+            this.Pixels = new short[height, width];
+            this.InvertColours = invertColours;
         }
 
         /// <summary>
         /// Creates a Heightmap from the given two dimensional array in (y, x) coordinates
         /// </summary>
         /// <param name="values">Two dimantional array of heights</param>
+        /// <param name="invertColours">Inverts the block/white gradient used for the image maps</param>
         public Heightmap(short[,] values, bool invertColours)
         {
-            this._width = (ushort)values.GetLength(1);
-            this._height = (ushort)values.GetLength(0);
-            this.pixels = values;
-            this.invertColours = invertColours;
+            this.Width = (ushort)values.GetLength(1);
+            this.Height = (ushort)values.GetLength(0);
+            this.Pixels = values;
+            this.InvertColours = invertColours;
         }
 
         /// <summary>
         /// Creates a Heightmap from an single dimensional array and given size parameters
         /// </summary>
-        /// <param name="values">Single dimensional array of heights</param>
+        /// <param name="values">Single dimensional indexed structure containing all the values</param>
         /// <param name="width">Width of the heightmap in pixels</param>
         /// <param name="height">Height of the heightmap in pixels</param>
-        public Heightmap(short[] values, ushort width, ushort height, bool invertColours)
+        /// <param name="invertColours">Inverts the block/white gradient used for the image maps</param>
+        public Heightmap(IList<short> values, ushort width, ushort height, bool invertColours)
         {
-            this._width = width;
-            this._height = height;
-            this.pixels = new short[height, width];
-            this.invertColours = invertColours;
+            this.Width = width;
+            this.Height = height;
+            this.Pixels = new short[height, width];
+            this.InvertColours = invertColours;
             for (int y = 0; y < height; y++)
             {
                 for (int x = 0; x < width; x++)
                 {
-                    this.pixels[y, x] = values[(y * width) + x];
+                    this.Pixels[y, x] = values[(y * width) + x];
                 }
             }
         }
@@ -180,24 +173,24 @@ namespace HeightmapManager
         /// <param name="path">Absolute path to the heightmap binary file</param>
         public Heightmap(string path)
         {
-            if (path == null) { throw new ArgumentNullException("path", "The path cannot be null"); }
+            if (path == null) { throw new ArgumentNullException(nameof(path), "The path cannot be null"); }
             if (!File.Exists(path)) { throw new FileNotFoundException("The following file was not found on the system.", path); }
             if (!acceptedExtensions.Contains(Path.GetExtension(path).ToLower())) { throw new NotSupportedException("Only .bin, .raw, and .dat formats supported."); }
 
             byte[] data = File.ReadAllBytes(path);
-            this._width = BitConverter.ToUInt16(data, 0);
-            this._height = BitConverter.ToUInt16(data, 2);
-            this.invertColours = true;
+            this.Width = BitConverter.ToUInt16(data, 0);
+            this.Height = BitConverter.ToUInt16(data, 2);
+            this.InvertColours = true;
 
-            if (data.LongLength != (((long)this._width * (long)this._height * 2L) + 4L)) { throw new FormatException("Binary data is of incorrect lenght or incorrectly formatted."); }
+            if (data.LongLength != (2L * this.Width * this.Height) + 4) { throw new FormatException("Binary data is of incorrect lenght or incorrectly formatted."); }
 
-            this.pixels = new short[this._height, this._width];
-            for (int y = 0; y < this._height; y++)
+            this.Pixels = new short[this.Height, this.Width];
+            for (int y = 0; y < this.Height; y++)
             {
-                for (int x = 0; x < this._width; x++)
+                for (int x = 0; x < this.Width; x++)
                 {
-                    int i = (((y * this._width) + x) * 2) + 4;
-                    this.pixels[y, x] = BitConverter.ToInt16(data, i);
+                    int i = (((y * this.Width) + x) * 2) + 4;
+                    this.Pixels[y, x] = BitConverter.ToInt16(data, i);
                 }
             }
         }
@@ -210,10 +203,7 @@ namespace HeightmapManager
         /// <param name="x">X coordinate of the pixel to modify</param>
         /// <param name="y">Y coordinate of the pixel to modify</param>
         /// <param name="value">Value to set the pixel to</param>
-        public void SetPixel(int x, int y, short value)
-        {
-            this.pixels[y, x] = value;
-        }
+        public void SetPixel(int x, int y, short value) => this.Pixels[y, x] = value;
 
         /// <summary>
         /// Sets all the pixels of the map according to the given single dimensional array
@@ -221,13 +211,13 @@ namespace HeightmapManager
         /// <param name="values">Single dimensional array of heights to set the heightmap to</param>
         public void SetPixels(short[] values)
         {
-            if (values.Length == this.size)
+            if (values.Length == this.Size)
             {
-                for (int y = 0; y < this._height; y++)
+                for (int y = 0; y < this.Height; y++)
                 {
-                    for (int x = 0; x < this._width; x++)
+                    for (int x = 0; x < this.Width; x++)
                     {
-                        this.pixels[y, x] = values[(y * this._width) + x];
+                        this.Pixels[y, x] = values[(y * this.Width) + x];
                     }
                 }
             }
@@ -239,9 +229,9 @@ namespace HeightmapManager
         /// <param name="values">Two dimensional array of heights to set the heightmap to</param>
         public void SetPixels(short[,] values)
         {
-            if (values.GetLength(0) == this._height && values.GetLength(1) == this._width)
+            if (values.GetLength(0) == this.Height && values.GetLength(1) == this.Width)
             {
-                this.pixels = values;
+                this.Pixels = values;
             }
         }
 
@@ -250,10 +240,7 @@ namespace HeightmapManager
         /// </summary>
         /// <param name="x">X coordinates of the pixel to read</param>
         /// <param name="y">Y coordinate of the pixel to read</param>
-        public short ReadPixel(int x, int y)
-        {
-            return this.pixels[y, x];
-        }
+        public short ReadPixel(int x, int y) => this.Pixels[y, x];
 
         /// <summary>
         /// Reads the pixels on the map through bilinear extrapolation
@@ -263,15 +250,15 @@ namespace HeightmapManager
         public double ReadPixelBilinear(double x, double y)
         {
             //Position on the map
-            Vector2d pos = new Vector2d(MathUtils.Clamp01(x) * this._width, MathUtils.Clamp01(y) * this._height);
+            Vector2d pos = new Vector2d(MathUtils.Clamp01(x) * this.Width, MathUtils.Clamp01(y) * this.Height);
             //Decimal fraction between pixels
             Vector2d pPos = new Vector2d(pos.x - Math.Truncate(pos.x), pos.y - Math.Truncate(pos.y));
-            if (pPos.magnitude == 0) { return this.pixels[(int)pos.y, (int)pos.x]; }
+            if (pPos.magnitude == 0) { return this.Pixels[(int)pos.y, (int)pos.x]; }
             //Pixel positions
             int x1 = (int)Math.Floor(pos.x), x2 = (int)Math.Ceiling(pos.x);
             int y1 = (int)Math.Floor(pos.y), y2 = (int)Math.Ceiling(pos.y);
             //First linear interpolation on the x axis
-            Vector2d xPos = new Vector2d(MathUtils.Lerp(pPos.x, this.pixels[y1, x1], this.pixels[y1, x2]), MathUtils.Lerp(pPos.x, this.pixels[y2, x1], this.pixels[y2, x2]));
+            Vector2d xPos = new Vector2d(MathUtils.Lerp(pPos.x, this.Pixels[y1, x1], this.Pixels[y1, x2]), MathUtils.Lerp(pPos.x, this.Pixels[y2, x1], this.Pixels[y2, x2]));
             //Second linear interpolation between the first two axis
             return MathUtils.Lerp(pPos.y, xPos.x, xPos.y);
         }
@@ -281,12 +268,12 @@ namespace HeightmapManager
         /// </summary>
         public short[] ReadPixels()
         {
-            short[] values = new short[this.size];
-            for (int y = 0; y < this._height; y++)
+            short[] values = new short[this.Size];
+            for (int y = 0; y < this.Height; y++)
             {
-                for (int x = 0; x < this._width; x++)
+                for (int x = 0; x < this.Width; x++)
                 {
-                    values[(y * this._width) + x] = this.pixels[y, x];
+                    values[(y * this.Width) + x] = this.Pixels[y, x];
                 }
             }
             return values;
@@ -298,7 +285,9 @@ namespace HeightmapManager
         /// </summary>
         public short[,] ReadPixels2D()
         {
-            return this.pixels;
+            short[,] copy = new short[this.Height, this.Width];
+            Array.Copy(this.Pixels, copy, this.Pixels.Length);
+            return copy;
         }
 
         /// <summary>
@@ -307,16 +296,16 @@ namespace HeightmapManager
         public Color[] ToColorArray()
         {
             short[] values = ReadPixels();
-            Color[] pixels = new Color[this.size];
+            Color[] pixels = new Color[this.Size];
             int min = values.Min();
             int range = values.Max() - min;
-            for (int y = 0; y < this._height; y++)
+            for (int y = 0; y < this.Height; y++)
             {
-                for (int x = 0; x < this._width; x++)
+                for (int x = 0; x < this.Width; x++)
                 {
-                    int index = (y * this._width) + x;
-                    float c = (((float)(values[index] - min)) / (float)range);
-                    if (this.invertColours) { c = 1 - c; }
+                    int index = (y * this.Width) + x;
+                    float c = (values[index] - min) / (float)range;
+                    if (this.InvertColours) { c = 1 - c; }
                     pixels[index] = new Color(c, c, c);
                 }
             }
@@ -328,7 +317,7 @@ namespace HeightmapManager
         /// </summary>
         public Texture2D ToTexture2D()
         {
-            Texture2D map = new Texture2D(this._width, this._height, TextureFormat.ARGB32, false);
+            Texture2D map = new Texture2D(this.Width, this.Height, TextureFormat.ARGB32, false);
             map.SetPixels(ToColorArray());
             map.Apply();
             return map;
@@ -340,13 +329,13 @@ namespace HeightmapManager
         public byte[] ToByteArray()
         {
             List<byte> data = new List<byte>();
-            data.AddRange(BitConverter.GetBytes(this._width));
-            data.AddRange(BitConverter.GetBytes(this._height));
-            for (int y = 0; y < this._height; y++)
+            data.AddRange(BitConverter.GetBytes(this.Width));
+            data.AddRange(BitConverter.GetBytes(this.Height));
+            for (int y = 0; y < this.Height; y++)
             {
-                for (int x = 0; x < this._width; x++)
+                for (int x = 0; x < this.Width; x++)
                 {
-                    data.AddRange(BitConverter.GetBytes(this.pixels[y, x]));
+                    data.AddRange(BitConverter.GetBytes(this.Pixels[y, x]));
                 }
             }
             return data.ToArray();
@@ -371,9 +360,6 @@ namespace HeightmapManager
 
                 case SaveFormat.BOTH:
                     SaveBoth(path); break;
-
-                default:
-                    break;
             }
         }
 
@@ -384,7 +370,7 @@ namespace HeightmapManager
         private void SaveAsBinary(string path)
         {
             if (!Path.HasExtension(path)) { path += "_raw.bin"; }
-            else if (!acceptedExtensions.Contains(Path.GetExtension(path).ToLower())) { Path.ChangeExtension(path, ".bin"); }
+            else if (!acceptedExtensions.Contains(Path.GetExtension(path)?.ToLower())) { path = Path.ChangeExtension(path, ".bin"); }
             File.WriteAllBytes(path, ToByteArray());
         }
 
@@ -395,10 +381,10 @@ namespace HeightmapManager
         private void SaveAsImage(string path)
         {
             if (!Path.HasExtension(path)) { path += ".png"; }
-            if (Path.GetExtension(path).ToLower() != ".png") { Path.ChangeExtension(path, ".png"); }
+            if (Path.GetExtension(path).ToLower() != ".png") { path = Path.ChangeExtension(path, ".png"); }
             Texture2D map = ToTexture2D();
             File.WriteAllBytes(path, map.EncodeToPNG());
-            Texture2D.Destroy(map);
+            Object.Destroy(map);
         }
 
         /// <summary>
@@ -407,30 +393,30 @@ namespace HeightmapManager
         /// <param name="path">Absolute path to save the heightmap to</param>
         private void SaveBoth(string path)
         {
-            if (Path.HasExtension(path)) { Path.ChangeExtension(path, null); }
+            if (Path.HasExtension(path)) { path = Path.ChangeExtension(path, null); }
             List<byte> data = new List<byte>();
-            data.AddRange(BitConverter.GetBytes(this._width));
-            data.AddRange(BitConverter.GetBytes(this._height));
+            data.AddRange(BitConverter.GetBytes(this.Width));
+            data.AddRange(BitConverter.GetBytes(this.Height));
             short[] values = ReadPixels();
-            Color[] pixels = new Color[this.size];
+            Color[] pixels = new Color[this.Size];
             int min = values.Min();
             int range = values.Max() - min;
-            for (int y = 0; y < this._height; y++)
+            for (int y = 0; y < this.Height; y++)
             {
-                for (int x = 0; x < this._width; x++)
+                for (int x = 0; x < this.Width; x++)
                 {
                     data.AddRange(BitConverter.GetBytes(this[x, y]));
-                    int index = (y * this.width) + x;
-                    float shade = this.invertColours ? (1f - (((float)(values[index] - min)) / (float)range)) : (((float)(values[index] - min)) / (float)range);
+                    int index = (y * this.Width) + x;
+                    float shade = this.InvertColours ? 1 - ((values[index] - min) / (float)range) : (values[index] - min) / (float)range;
                     pixels[index] = new Color(shade, shade, shade);
                 }
             }
             File.WriteAllBytes(path + "_raw.bin", data.ToArray());
-            Texture2D map = new Texture2D(this._width, this._height, TextureFormat.ARGB32, false);
+            Texture2D map = new Texture2D(this.Width, this.Height, TextureFormat.ARGB32, false);
             map.SetPixels(pixels);
             map.Apply();
             File.WriteAllBytes(path + ".png", map.EncodeToPNG());
-            Texture2D.Destroy(map);
+            Object.Destroy(map);
         }
         #endregion
 
@@ -438,10 +424,7 @@ namespace HeightmapManager
         /// <summary>
         /// Returns a string representation of the object
         /// </summary>
-        public override string ToString()
-        {
-            return String.Format("Heightmap: [Width: {0}], [Height: {1}], [Colours inverted: {2}]", this._width, this._height, this.invertColours);
-        }
+        public override string ToString() => $"Heightmap: [Width: {this.Width}], [Height: {this.Height}], [Colours inverted: {this.InvertColours}]";
         #endregion
     }
 }
