@@ -16,7 +16,7 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>false</DebugSymbols>
-    <DebugType>none</DebugType>
+    <DebugType>portable</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>..\Output\GameData\HeightmapExtractor\Plugins\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
@@ -38,8 +38,7 @@
       <HintPath>..\KSP\KSP_x64_Data\Managed\Assembly-CSharp.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="HeightmapManager, Version=1.0.5528.21926, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="HeightmapManager">
       <HintPath>..\Output\GameData\HeightmapExtractor\Plugins\HeightmapManager.dll</HintPath>
       <Private>False</Private>
     </Reference>

@@ -70,7 +70,7 @@ namespace HeightmapExtractor
         private Stopwatch timer, mapTimer;
 
         //GUI
-        private readonly Texture2D bar = new Texture2D(1, 1, TextureFormat.ARGB32, false), background = new Texture2D(1, 1, TextureFormat.ARGB32, false);
+        private Texture2D bar, background;
         private readonly int id = Guid.NewGuid().GetHashCode();
         private Progressbar progressbar = new Progressbar();
         private double time;
@@ -234,7 +234,10 @@ namespace HeightmapExtractor
             //Progressbar
             try
             {
+                this.bar = new Texture2D(1, 1, TextureFormat.ARGB32, false);
                 this.bar.LoadImage(File.ReadAllBytes(Path.Combine(HMUtils.ProgressbarURL, "progressbar.png")));
+
+                this.background = new Texture2D(1, 1, TextureFormat.ARGB32, false);
                 this.background.LoadImage(File.ReadAllBytes(Path.Combine(HMUtils.ProgressbarURL, "progressbarBackground.png")));
             }
             catch (Exception e)
