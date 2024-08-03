@@ -31,7 +31,7 @@ namespace HeightmapExtractor
             GUILayout.BeginVertical();
             GUILayout.FlexibleSpace();
 
-            GUI.enabled = !MapExtractor.Instance.Extract;
+            GUI.enabled = !MapExtractor.Instance.Extracting;
             if (GUILayout.Button("Reload config"))
             {
                 MapExtractor.Instance.LoadConfig();
@@ -39,7 +39,7 @@ namespace HeightmapExtractor
             }
             GUILayout.FlexibleSpace();
 
-            if (GUILayout.Button("Restart generation"))
+            if (GUILayout.Button("Start generation"))
             {
                 MapExtractor.Instance.StartGeneration();
             }
