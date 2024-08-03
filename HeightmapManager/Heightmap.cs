@@ -278,7 +278,7 @@ namespace HeightmapManager
             }
             return values;
         }
-    
+
         /// <summary>
         /// Returns a single dimensional array of all the pixels in the heightmap,
         /// where the first parameter is the height and the second the lenght
@@ -317,7 +317,7 @@ namespace HeightmapManager
         /// </summary>
         public Texture2D ToTexture2D()
         {
-            Texture2D map = new Texture2D(this.Width, this.Height, TextureFormat.ARGB32, false);
+            Texture2D map = new(this.Width, this.Height, TextureFormat.RGB24, false);
             map.SetPixels(ToColorArray());
             map.Apply();
             return map;
@@ -412,7 +412,7 @@ namespace HeightmapManager
                 }
             }
             File.WriteAllBytes(path + "_raw.bin", data.ToArray());
-            Texture2D map = new Texture2D(this.Width, this.Height, TextureFormat.ARGB32, false);
+            Texture2D map = new(this.Width, this.Height, TextureFormat.RGB24, false);
             map.SetPixels(pixels);
             map.Apply();
             File.WriteAllBytes(path + ".png", map.EncodeToPNG());
